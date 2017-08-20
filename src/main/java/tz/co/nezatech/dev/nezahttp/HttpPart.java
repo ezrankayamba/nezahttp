@@ -15,7 +15,7 @@ public class HttpPart {
 
 	public void calculateLength() {
 		if (this.data instanceof String) {
-			this.contentLength = ((String) data).length();
+			this.contentLength = ((String) data).getBytes().length;
 		}
 	}
 

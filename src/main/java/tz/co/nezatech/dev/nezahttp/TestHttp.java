@@ -20,10 +20,10 @@ public class TestHttp {
 	}
 
 	private static void testGet() throws UnknownHostException, IOException {
-		HttpClient client = new HttpClient("http://localhost:9090/survey/test");
+		HttpClient client = new HttpClient("http://371309a9.ngrok.io/survey/test");
 		client.connect();
 		Response response = client.get();// working
-		println(response.getBody());
+		println(response.getBody()); 
 	}
 	private static void testPost() throws UnknownHostException, IOException {
 		HttpClient client = new HttpClient("http://localhost:9090/survey/test");
@@ -49,6 +49,22 @@ public class TestHttp {
 		File binaryFile3 = new File("/home/nkayamba/Desktop/test3.png");
 		parts.add(new HttpFilePart("testfile33", "image/png", binaryFile3, "test3.png"));
 		parts.add(new HttpPart("name2a", "text/plain", "Test Form2 AlA"));
+		parts.add(new HttpPart("form_id", "text/plain", 1 + ""));
+		parts.add(new HttpPart("form_name", "text/plain", 21 + "ssswd"));
+		parts.add(new HttpPart("repository_id", "text/plain", 1 + ""));
+		parts.add(new HttpPart("repository_id2", "text/plain", 1 + ""));
+		parts.add(new HttpPart("repository_id3", "text/plain", 1 + "wwww"));
+		parts.add(new HttpPart("repository_id4", "text/plain", 1 + "wwww"));
+		parts.add(new HttpPart("repository_id5", "text/plain", 1 + "wwww"));
+		parts.add(new HttpPart("repository_id6", "text/plain", 1 + "wwww"));
+		parts.add(new HttpPart("repository_id7", "text/plain", 1 + "wwww"));
+		
+		parts.add(new HttpFilePart("testfile4", "image/png", new File("/home/nkayamba/Desktop/test3.png"), "test3.png"));
+		parts.add(new HttpFilePart("testfile5", "image/png", new File("/home/nkayamba/Desktop/test3.png"), "test3.png"));
+		parts.add(new HttpFilePart("testfile6", "image/png", new File("/home/nkayamba/Desktop/test3.png"), "test3.png"));
+		parts.add(new HttpFilePart("testfile7", "image/png", new File("/home/nkayamba/Desktop/test3.png"), "test3.png"));
+		parts.add(new HttpFilePart("testfile8", "image/png", new File("/home/nkayamba/Desktop/test3.png"), "test3.png"));
+		parts.add(new HttpFilePart("testfile9", "image/png", new File("/home/nkayamba/Desktop/test3.png"), "test3.png"));
 		return parts;
 	}
 

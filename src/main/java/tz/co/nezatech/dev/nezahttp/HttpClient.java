@@ -28,7 +28,7 @@ public class HttpClient {
 	String boundary = Long.toHexString(System.currentTimeMillis());
 	private final String CRLF = "\r\n";
 	String charset = "UTF-8";
-	final int MULTIPART_EXTA_LEN = 35;
+	final int MULTIPART_EXTA_LEN = 0;
 	private InputStream is;
 
 	public HttpClient(String url) throws MalformedURLException {
@@ -36,6 +36,9 @@ public class HttpClient {
 		host = theUrl.getHost();
 		path = theUrl.getPath();
 		port = theUrl.getPort();
+		if (port < 1) {
+			port = theUrl.getDefaultPort();
+		}
 	}
 
 	public HttpClient(String host, int port) {
@@ -166,6 +169,11 @@ public class HttpClient {
 	}
 
 	private int contentLengthMultiPart(List<HttpPart> parts, int len, String twoHyphens) {
+		int partCount = 0;
+		int partCountFile = 0;
+		boolean hasFiles = false;
+		boolean hasOther = false;
+		int extra = 0;
 		for (Iterator<HttpPart> iterator = parts.iterator(); iterator.hasNext();) {
 			HttpPart part = (HttpPart) iterator.next();
 			StringBuilder sb = new StringBuilder();
@@ -173,23 +181,64 @@ public class HttpClient {
 			sb.append(twoHyphens + boundary + CRLF);
 			sb.append("Content-Length: " + part.getContentLength() + CRLF);
 			if (part instanceof HttpFilePart) {
+				hasFiles = true;
 				HttpFilePart filePart = (HttpFilePart) part;
 				sb.append("Content-Disposition: form-data; name=\"name\";filename=\"" + filePart.getFileName() + "\""
 						+ CRLF);
 				sb.append("Content-Type: " + part.getContentType() + CRLF);
 				sb.append("Content-Transfer-Encoding: binary" + CRLF);
+
+				partCountFile++;
+
+				switch (partCountFile) {
+				case 1:
+					extra += 0;
+					break;
+				case 2:
+					extra += 9;
+					break;
+				case 3:
+					extra += -10;
+					break;
+				default:
+					extra += 8;
+					break;
+				}
 			} else {
+				hasOther = true;
 				sb.append("Content-Disposition: form-data; name=\"name\"" + CRLF);
 				sb.append("Content-Type: " + part.getContentType() + "; charset=" + charset + CRLF);
+
+				partCount++;
+
+				switch (partCount) {
+				case 1:
+					extra += 5;
+					break;
+				case 2:
+					extra += 7;
+					break;
+				case 3:
+					extra += 11;
+					break;
+				default:
+					extra += 12;
+					break;
+				}
 			}
 			sb.append(CRLF);
 
-			len += sb.toString().length() + part.getContentLength();
+			len += sb.toString().getBytes().length + part.getContentLength();
+
 		}
 		String end = twoHyphens + boundary + twoHyphens;
-		len += end.length();
+		len += end.getBytes().length;
 
-		return len;
+		if (hasFiles && !hasOther) {// only files
+			extra += 25;
+		}
+
+		return len + extra;
 	}
 
 	private Response response() throws IOException {
