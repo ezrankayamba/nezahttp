@@ -30,6 +30,7 @@ public class HttpClient {
 	String charset = "UTF-8";
 	final int MULTIPART_EXTA_LEN = 0;
 	private InputStream is;
+	private HttpPostProgressListener postProgressListener;
 
 	public HttpClient(String url) throws MalformedURLException {
 		URL theUrl = new URL(url);
@@ -101,13 +102,12 @@ public class HttpClient {
 	}
 
 	public Response postParts(List<HttpPart> parts) throws IOException {
-		int len = 0;
 		String twoHyphens = "--";
 		int maxBufferSize = 4 * 1024;
 		int bytesRead, bytesAvailable, bufferSize;
 		byte[] buffer;
 
-		len = contentLengthMultiPart(parts, len, twoHyphens);
+		int len = contentLengthMultiPart(parts, twoHyphens);
 
 		OutputStream os = socket.getOutputStream();
 
@@ -120,9 +120,16 @@ public class HttpClient {
 		wr.append("Content-Type: multipart/form-data; boundary=" + boundary + CRLF);
 		wr.append(CRLF);
 
+		int progress = 0;
+		if (postProgressListener != null) {// start progress
+			postProgressListener.progressChanged(0, 0, len);
+		}
+
 		for (Iterator<HttpPart> iterator = parts.iterator(); iterator.hasNext();) {
 			HttpPart part = (HttpPart) iterator.next();
 			Object data = part.getData();
+
+			int hdLen = contentLengthMultiPart(part, twoHyphens);
 
 			wr.append(twoHyphens + boundary + CRLF);
 			if (part instanceof HttpFilePart) {
@@ -135,6 +142,11 @@ public class HttpClient {
 				wr.append(CRLF);
 				wr.flush();
 
+				progress += hdLen;
+				if (postProgressListener != null) {// start progress
+					postProgressListener.progressChanged(hdLen, progress, len);
+				}
+
 				DataOutputStream dos = new DataOutputStream(os);
 				File f = (File) data;
 
@@ -146,6 +158,12 @@ public class HttpClient {
 				bytesRead = is.read(buffer, 0, bufferSize);
 				while (bytesRead > 0) {
 					dos.write(buffer, 0, bufferSize);
+
+					progress += (bytesRead);
+					if (postProgressListener != null) {// start progress
+						postProgressListener.progressChanged(bufferSize, progress, len);
+					}
+
 					bytesAvailable = is.available();
 					bufferSize = Math.min(bytesAvailable, maxBufferSize);
 					bytesRead = is.read(buffer, 0, bufferSize);
@@ -161,84 +179,107 @@ public class HttpClient {
 				wr.append(part.getData().toString());
 				wr.append(CRLF);
 				wr.flush();
+
+				progress += hdLen + part.getContentLength();
+				if (postProgressListener != null) {// start progress
+					postProgressListener.progressChanged(hdLen + part.getContentLength(), progress, len);
+				}
 			}
 		}
 		wr.append(twoHyphens + boundary + twoHyphens);
 		wr.flush();
+
+		int end = contentLengthMultiPart(twoHyphens);
+		progress += end;
+		if (postProgressListener != null) {// start progress
+			postProgressListener.progressChanged(end, progress, len);
+		}
+
 		return response();
 	}
 
-	private int contentLengthMultiPart(List<HttpPart> parts, int len, String twoHyphens) {
-		int partCount = 0;
-		int partCountFile = 0;
-		boolean hasFiles = false;
-		boolean hasOther = false;
-		int extra = 0;
+	public boolean isBetween(int x, int lower, int upper) {
+		return lower <= x && x <= upper;
+	}
+
+	private int contentLengthMultiPart(List<HttpPart> parts, String twoHyphens) {
+		int len = 0;
 		for (Iterator<HttpPart> iterator = parts.iterator(); iterator.hasNext();) {
 			HttpPart part = (HttpPart) iterator.next();
 			StringBuilder sb = new StringBuilder();
 
 			sb.append(twoHyphens + boundary + CRLF);
-			sb.append("Content-Length: " + part.getContentLength() + CRLF);
 			if (part instanceof HttpFilePart) {
-				hasFiles = true;
 				HttpFilePart filePart = (HttpFilePart) part;
-				sb.append("Content-Disposition: form-data; name=\"name\";filename=\"" + filePart.getFileName() + "\""
-						+ CRLF);
+				sb.append("Content-Disposition: form-data; name=\"" + part.getName() + "\"; filename=\""
+						+ filePart.getFileName() + "\"" + CRLF);
 				sb.append("Content-Type: " + part.getContentType() + CRLF);
+				sb.append("Content-Length: " + part.getContentLength() + CRLF);
 				sb.append("Content-Transfer-Encoding: binary" + CRLF);
+				sb.append(CRLF);
 
-				partCountFile++;
+				// data
 
-				switch (partCountFile) {
-				case 1:
-					extra += 0;
-					break;
-				case 2:
-					extra += 9;
-					break;
-				case 3:
-					extra += -10;
-					break;
-				default:
-					extra += 8;
-					break;
-				}
+				sb.append(CRLF);
 			} else {
-				hasOther = true;
-				sb.append("Content-Disposition: form-data; name=\"name\"" + CRLF);
+				sb.append("Content-Disposition: form-data; name=\"" + part.getName() + "\"" + CRLF);
 				sb.append("Content-Type: " + part.getContentType() + "; charset=" + charset + CRLF);
+				sb.append("Content-Length: " + part.getContentLength() + CRLF);
+				sb.append(CRLF);
 
-				partCount++;
+				// data
 
-				switch (partCount) {
-				case 1:
-					extra += 5;
-					break;
-				case 2:
-					extra += 7;
-					break;
-				case 3:
-					extra += 11;
-					break;
-				default:
-					extra += 12;
-					break;
-				}
+				sb.append(CRLF);
 			}
-			sb.append(CRLF);
 
-			len += sb.toString().getBytes().length + part.getContentLength();
-
+			len += sb.toString().length() + part.getContentLength();
 		}
 		String end = twoHyphens + boundary + twoHyphens;
-		len += end.getBytes().length;
+		len += end.length();
 
-		if (hasFiles && !hasOther) {// only files
-			extra += 25;
+		return len;
+	}
+
+	private int contentLengthMultiPart(HttpPart part, String twoHyphens) {
+		int len = 0;
+
+		StringBuilder sb = new StringBuilder();
+
+		sb.append(twoHyphens + boundary + CRLF);
+		if (part instanceof HttpFilePart) {
+			HttpFilePart filePart = (HttpFilePart) part;
+			sb.append("Content-Disposition: form-data; name=\"" + part.getName() + "\"; filename=\""
+					+ filePart.getFileName() + "\"" + CRLF);
+			sb.append("Content-Type: " + part.getContentType() + CRLF);
+			sb.append("Content-Length: " + part.getContentLength() + CRLF);
+			sb.append("Content-Transfer-Encoding: binary" + CRLF);
+			sb.append(CRLF);
+
+			// data
+
+			sb.append(CRLF);
+		} else {
+			sb.append("Content-Disposition: form-data; name=\"" + part.getName() + "\"" + CRLF);
+			sb.append("Content-Type: " + part.getContentType() + "; charset=" + charset + CRLF);
+			sb.append("Content-Length: " + part.getContentLength() + CRLF);
+			sb.append(CRLF);
+
+			// data
+
+			sb.append(CRLF);
 		}
 
-		return len + extra;
+		len += sb.toString().length();
+
+		return len;
+	}
+
+	private int contentLengthMultiPart(String twoHyphens) {
+		int len = 0;
+		String end = twoHyphens + boundary + twoHyphens;
+		len += end.length();
+
+		return len;
 	}
 
 	private Response response() throws IOException {
@@ -255,6 +296,14 @@ public class HttpClient {
 			}
 		}
 		return new Response(sb.toString());
+	}
+
+	public HttpPostProgressListener getPostProgressListener() {
+		return postProgressListener;
+	}
+
+	public void setPostProgressListener(HttpPostProgressListener postProgressListener) {
+		this.postProgressListener = postProgressListener;
 	}
 
 }
