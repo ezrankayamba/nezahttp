@@ -193,6 +193,7 @@ public class HttpClient {
 		progress += end;
 		if (postProgressListener != null) {// start progress
 			postProgressListener.progressChanged(end, progress, len);
+			postProgressListener.postCompleted(len);
 		}
 
 		return response();
