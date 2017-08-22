@@ -307,4 +307,8 @@ public class HttpClient {
 		this.postProgressListener = postProgressListener;
 	}
 
+	public void setBasicAuth(String basicAuth) {
+		this.basicAuth = basicAuth;
+	}
+
 }

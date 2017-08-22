@@ -12,8 +12,8 @@ public class TestHttp {
 
 	public static void main(String[] args) {
 		try {
-			testGet();
-			testPost();
+			//testGet();
+			//testPost();
 			testPostParts();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -36,7 +36,7 @@ public class TestHttp {
 	}
 
 	private static void testPostParts() throws UnknownHostException, IOException {
-		HttpClient client = new HttpClient("http://371309a9.ngrok.io/survey/form");
+		HttpClient client = new HttpClient("http://pincomtz.net:9090/survey/form");
 		client.setPostProgressListener(new HttpPostProgressListener() {
 
 			@Override
