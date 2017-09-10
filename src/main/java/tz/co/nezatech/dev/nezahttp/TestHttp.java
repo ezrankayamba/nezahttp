@@ -12,37 +12,42 @@ public class TestHttp {
 
 	public static void main(String[] args) {
 		try {
-			//testGet();
-			//testPost();
-			testPostParts();
+			testGet();
+			// testPost();
+			// testPostParts();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
-	private static void testGet() throws UnknownHostException, IOException {
-		HttpClient client = new HttpClient("http://371309a9.ngrok.io/survey/test");
+	public static void testGet() throws UnknownHostException, IOException {
+		HttpClient client = new HttpClient("http://localhost:9090/survey/repos/1");
+		client.setBasicAuth("Authorization: Basic dGVzdC5hcGk6cHdkQDEyMw==");
 		client.connect();
 		Response response = client.get();// working
+		println(response.getStatusLine());
+		println(response.getHeaders().toString());
 		println(response.getBody());
+		println(new String(response.getBytes()));
+
 	}
 
-	private static void testPost() throws UnknownHostException, IOException {
+	public static void testPost() throws UnknownHostException, IOException {
 		HttpClient client = new HttpClient("http://localhost:9090/survey/test");
 		client.connect();
 		Response response = client.post("Data123,Data123", "text/plain");
 		println(response.getBody());
 	}
 
-	private static void testPostParts() throws UnknownHostException, IOException {
-		HttpClient client = new HttpClient("http://pincomtz.net:9090/survey/form");
+	public static void testPostParts() throws UnknownHostException, IOException {
+		HttpClient client = new HttpClient("http://localhost:9090/survey/form");
 		client.setPostProgressListener(new HttpPostProgressListener() {
 
 			@Override
 			public void progressChanged(int bytesAdded, int currentProgress, int totalSize) {
 				System.out.println(String.format("%s - %d | %d -> %d", getCurrentTimeStamp(), totalSize, bytesAdded,
 						currentProgress));
+
 			}
 
 			@Override
@@ -65,7 +70,7 @@ public class TestHttp {
 		parts.add(new HttpPart("name1", "text/plain", "Test Form1"));
 		File binaryFile = new File("/home/nkayamba/Desktop/test.jpg");
 		parts.add(new HttpFilePart("testfile1", "image/jpeg", binaryFile, "test.jpg"));
-		
+
 		return parts;
 	}
 

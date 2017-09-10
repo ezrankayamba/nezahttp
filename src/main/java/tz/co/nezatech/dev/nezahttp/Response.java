@@ -7,6 +7,7 @@ public class Response {
 	private int statusCode;
 	private String raw, statusLine, body;
 	private Map<String, String> headers = new LinkedHashMap<String, String>();
+	private byte[] bytes;
 
 	public Response(String raw) {
 		super();
@@ -15,25 +16,35 @@ public class Response {
 	}
 
 	private void build() {
-		String[] lines = this.raw.split("\n");
+		String[] parts = this.raw.split("\r\n\r\n");
+		String[] lines = parts[0].split("\n");
 		this.statusLine = lines[0];
+
 		this.statusCode = Integer.parseInt(this.statusLine.split(" ")[1]);
 
-		int bodyIndex = -1;
-
 		for (int i = 1; i < lines.length; i++) {
-			String line = lines[i];
-			if (line.isEmpty()) {
-				bodyIndex = i + 2;
-				break;
-			}
-			String[] hkv = line.split(": ");
+			String[] hkv = lines[i].split(": ");
 			headers.put(hkv[0], hkv[1]);
 		}
-
-		if (bodyIndex != -1 && bodyIndex < lines.length) {
-			body = lines[bodyIndex];
+		this.body = parts[1];
+		try {
+			String cd = getHeaders().get("Content-Disposition");
+			if (cd != null && cd.contains("attachment")) {
+				String fileInfo[] = cd.split(";")[1].split("=");
+				headers.put("Filename", fileInfo[1]);
+			}
+		} catch (Exception e) {
+			// TODO: handle exception
 		}
+
+	}
+
+	public byte[] getBytes() {
+		return bytes;
+	}
+
+	public void setBytes(byte[] bytes) {
+		this.bytes = bytes;
 	}
 
 	public int getStatusCode() {
@@ -51,4 +62,5 @@ public class Response {
 	public Map<String, String> getHeaders() {
 		return headers;
 	}
+
 }

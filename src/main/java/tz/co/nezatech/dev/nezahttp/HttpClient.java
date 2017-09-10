@@ -1,19 +1,20 @@
 package tz.co.nezatech.dev.nezahttp;
 
-import java.io.BufferedReader;
+import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -103,7 +104,7 @@ public class HttpClient {
 
 	public Response postParts(List<HttpPart> parts) throws IOException {
 		String twoHyphens = "--";
-		int maxBufferSize = 4 * 1024;
+		int maxBufferSize = 1 * 1024;
 		int bytesRead, bytesAvailable, bufferSize;
 		byte[] buffer;
 
@@ -285,18 +286,27 @@ public class HttpClient {
 
 	private Response response() throws IOException {
 		StringBuilder sb = new StringBuilder();
-		BufferedReader rd = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		BufferedInputStream in = new BufferedInputStream(socket.getInputStream());
+		byte[] contents = new byte[1024];
 
-		int c;
-
-		while (((c = rd.read()) >= 0)) {
-			if (c != 0x0d /* <CR> */ ) {
-				sb.append((char) c);
-			} else {
-				// Ignore <CR>.
-			}
+		int bytesRead = 0;
+		while ((bytesRead = in.read(contents)) != -1) {
+			sb.append(new String(contents, 0, bytesRead));
+			baos.write(contents, 0, bytesRead);
+			baos.flush();
 		}
-		return new Response(sb.toString());
+
+		Response res = new Response(sb.toString());
+		String len = res.getHeaders().get("Content-Length");
+
+		byte[] bytes = baos.toByteArray();
+		int to = bytes.length;
+		int from = to - Integer.parseInt(len.trim());
+		int size = to - from;
+		System.out.println(String.format("Len: %s, From: %d, To: %d, Size: %d\n", len, from, to, size));
+		res.setBytes(Arrays.copyOfRange(bytes, from, to));
+		return res;
 	}
 
 	public HttpPostProgressListener getPostProgressListener() {
