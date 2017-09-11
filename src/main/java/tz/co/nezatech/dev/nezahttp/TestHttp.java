@@ -21,14 +21,14 @@ public class TestHttp {
 	}
 
 	public static void testGet() throws UnknownHostException, IOException {
-		HttpClient client = new HttpClient("http://localhost:9090/survey/repos/1");
+		HttpClient client = new HttpClient("http://pincomtz.net:9090/survey/repos");
 		client.setBasicAuth("Authorization: Basic dGVzdC5hcGk6cHdkQDEyMw==");
 		client.connect();
 		Response response = client.get();// working
 		println(response.getStatusLine());
 		println(response.getHeaders().toString());
 		println(response.getBody());
-		println(new String(response.getBytes()));
+		//println(new String(response.getBytes()));
 
 	}
 

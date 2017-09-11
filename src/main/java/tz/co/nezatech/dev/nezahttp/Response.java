@@ -59,6 +59,10 @@ public class Response {
 		return body;
 	}
 
+	public void setBody(String body) {
+		this.body = body;
+	}
+
 	public Map<String, String> getHeaders() {
 		return headers;
 	}

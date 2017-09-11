@@ -298,14 +298,24 @@ public class HttpClient {
 		}
 
 		Response res = new Response(sb.toString());
-		String len = res.getHeaders().get("Content-Length");
 
-		byte[] bytes = baos.toByteArray();
-		int to = bytes.length;
-		int from = to - Integer.parseInt(len.trim());
-		int size = to - from;
-		System.out.println(String.format("Len: %s, From: %d, To: %d, Size: %d\n", len, from, to, size));
-		res.setBytes(Arrays.copyOfRange(bytes, from, to));
+		String len = res.getHeaders().get("Content-Length");
+		String te = res.getHeaders().get("Transfer-Encoding");
+		String body = res.getBody();
+		if (body != null && te != null && te.trim().equals("chunked")) {
+			body = body.split("\n")[1];
+			res.setBody(body);
+		}
+
+		if (res.getStatusCode() == 200 && len != null) {
+			byte[] bytes = baos.toByteArray();
+			int to = bytes.length;
+			int from = to - Integer.parseInt(len.trim());
+			int size = to - from;
+			System.out.println(String.format("Len: %s, From: %d, To: %d, Size: %d\n", len, from, to, size));
+			res.setBytes(Arrays.copyOfRange(bytes, from, to));
+		}
+
 		return res;
 	}
 
