@@ -12,9 +12,9 @@ public class TestHttp {
 
 	public static void main(String[] args) {
 		try {
-			testGet();
+			// testGet();
 			// testPost();
-			// testPostParts();
+			testPostParts();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -28,7 +28,7 @@ public class TestHttp {
 		println(response.getStatusLine());
 		println(response.getHeaders().toString());
 		println(response.getBody());
-		//println(new String(response.getBytes()));
+		// println(new String(response.getBytes()));
 
 	}
 
@@ -40,18 +40,19 @@ public class TestHttp {
 	}
 
 	public static void testPostParts() throws UnknownHostException, IOException {
-		HttpClient client = new HttpClient("http://localhost:9090/survey/form");
+		HttpClient client = new HttpClient("http://pincomtz.net:9090/survey/form/1");
+		client.setBasicAuth("Authorization: Basic dGVzdC5hcGk6cHdkQDEyMw==");
 		client.setPostProgressListener(new HttpPostProgressListener() {
 
 			@Override
-			public void progressChanged(int bytesAdded, int currentProgress, int totalSize) {
-				System.out.println(String.format("%s - %d | %d -> %d", getCurrentTimeStamp(), totalSize, bytesAdded,
-						currentProgress));
+			public void progressChanged(long bytesAdded, long currentProgress, long totalSize) {
+				System.out.println(String.format("%s - %d | %d -> %d | Pct: %s", getCurrentTimeStamp(), totalSize,
+						bytesAdded, currentProgress, String.format("%2.2f", (100.0 * currentProgress / totalSize)) + "%"));
 
 			}
 
 			@Override
-			public void postCompleted(int totalSize) {
+			public void postCompleted(long totalSize) {
 				println("Upload completed, total upload: " + totalSize);
 			}
 		});
@@ -70,6 +71,9 @@ public class TestHttp {
 		parts.add(new HttpPart("name1", "text/plain", "Test Form1"));
 		File binaryFile = new File("/home/nkayamba/Desktop/test.jpg");
 		parts.add(new HttpFilePart("testfile1", "image/jpeg", binaryFile, "test.jpg"));
+
+		File binaryFile2 = new File("/home/nkayamba/Desktop/test.mp4");
+		parts.add(new HttpFilePart("testfile2", "image/jpeg", binaryFile2, "test.mp4"));
 
 		return parts;
 	}

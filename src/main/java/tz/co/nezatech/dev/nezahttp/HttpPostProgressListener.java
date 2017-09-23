@@ -1,6 +1,6 @@
 package tz.co.nezatech.dev.nezahttp;
 
 public interface HttpPostProgressListener {
-	public void progressChanged(int bytesAdded, int currentProgress, int totalSize);
-	public void postCompleted(int totalSize);
+	public void progressChanged(long bytesAdded, long currentProgress, long totalSize);
+	public void postCompleted(long totalSize);
 }

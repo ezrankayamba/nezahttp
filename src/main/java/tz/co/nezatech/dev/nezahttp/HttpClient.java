@@ -15,6 +15,7 @@ import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Iterator;
 import java.util.List;
 
@@ -29,7 +30,6 @@ public class HttpClient {
 	String boundary = Long.toHexString(System.currentTimeMillis());
 	private final String CRLF = "\r\n";
 	String charset = "UTF-8";
-	final int MULTIPART_EXTA_LEN = 0;
 	private InputStream is;
 	private HttpPostProgressListener postProgressListener;
 
@@ -108,7 +108,7 @@ public class HttpClient {
 		int bytesRead, bytesAvailable, bufferSize;
 		byte[] buffer;
 
-		int len = contentLengthMultiPart(parts, twoHyphens);
+		long len = contentLengthMultiPart(parts, twoHyphens);
 
 		OutputStream os = socket.getOutputStream();
 
@@ -117,11 +117,11 @@ public class HttpClient {
 		wr.append("Host: " + this.host + ":" + this.port + CRLF);
 		wr.append(basicAuth + CRLF);
 		wr.append("Connection: close" + CRLF);
-		wr.append("Content-Length: " + (len + MULTIPART_EXTA_LEN) + CRLF);
+		wr.append("Content-Length: " + len  + CRLF);
 		wr.append("Content-Type: multipart/form-data; boundary=" + boundary + CRLF);
 		wr.append(CRLF);
 
-		int progress = 0;
+		long progress = 0;
 		if (postProgressListener != null) {// start progress
 			postProgressListener.progressChanged(0, 0, len);
 		}
@@ -130,7 +130,7 @@ public class HttpClient {
 			HttpPart part = (HttpPart) iterator.next();
 			Object data = part.getData();
 
-			int hdLen = contentLengthMultiPart(part, twoHyphens);
+			long hdLen = contentLengthMultiPart(part, twoHyphens);
 
 			wr.append(twoHyphens + boundary + CRLF);
 			if (part instanceof HttpFilePart) {
@@ -329,6 +329,15 @@ public class HttpClient {
 
 	public void setBasicAuth(String basicAuth) {
 		this.basicAuth = basicAuth;
+	}
+
+	public void setBasicAuth(String username, String password) {
+		setBasicAuth(HttpClient.basicAuth(username, password));
+	}
+
+	public static final String basicAuth(String username, String password) {
+		return "Authorization: Basic "
+				+ Base64.getEncoder().encodeToString(String.format("%s:%s", username, password).getBytes());
 	}
 
 }
